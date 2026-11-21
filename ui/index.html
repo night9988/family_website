@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!--移动端适配标签，width=device-width,页面宽度等于手机屏幕本身宽度，initial-scale=1,初始打开页面缩放比例1倍-->
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>时光 · 家庭相册</title>
+<style>
+  /*:root  定义css全局变量*/
+  :root{
+    --bg: #f6f1e7;
+    --ink: #3b342c;
+    --muted: #8a7f72;
+    --accent: #b07d52;
+    --card: #fffdf8;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html{ scroll-behavior: smooth; }
+
+  body{
+    margin: 0;/*外边距*/
+    /*字体优先级：从左往右找*/
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+    background: var(--bg);/*画布底色*/
+    color: var(--ink);/*文字颜色*/
+    -webkit-font-smoothing: antialiased;/*webkit内核chrome、edge、Safari 字体抗锯齿*/
+    overflow-x: hidden;/*横向溢出隐藏，页面左右不能移动，隐藏左右滚动条*/
+  }
+
+  /* 淡淡的暖色光晕，营造纸张质感 */
+  /*伪元素，两个冒号::作用凭空生成一个新元素，::before在选中元素内部最前面生成一个虚拟子节点，::after在选中元素最后面生一个虚拟子节点*/
+  body::before{
+    /*这是伪元素，在body上层生成一个看不见的图层， content:""  是伪元素必须写的，否则不生效。*/
+    content:"";
+    /*固定定位：这个光晕层牢牢钉在屏幕视口上，滚动页面的时候，它不会跟着滚，一直盖在画面上*/
+    position: fixed;
+    /* inset:0  等价于  top:0; right:0; bottom:0; left:0; 
+上下左右全部贴紧屏幕边缘 → 这个图层铺满整个屏幕*/
+    inset: 0;
+    /*重点：这个层不拦截鼠标点击、触摸。如果不加这个，盖在上面的光晕会挡住下面所有按钮，点不动东西。none就是让点击穿透，交给下层元素接收。*/
+    pointer-events: none;
+    /*堆叠层级：0。保证它在内容底层，文字、图片都在它上面，不会被光晕盖住。*/
+    z-index: 0;
+    /*两层径向渐变（圆形渐变），做暖光晕：
+      radial-gradient(circle at X Y) ：圆形光晕，圆心位置
+      第一个：圆心在 横向18%、纵向12%（左上区域），颜色  rgba(176,125,82,0.07) ，浅棕，透明度7%，到半径42%位置慢慢过渡到完全透明
+      最大可能半径的42%；最大可能半径closet-side也就是从圆心出发，到离它最近的一条屏幕边的距离
+      第二个：圆心在 横向82%、纵向78%（右下区域），透明度6%，到半径46%位置变透明
+      两层叠加，就是淡淡的、角落暖烘烘的纸张氛围感，不会很重。*/
+    background:
+      radial-gradient(circle at 18% 12%, rgba(176,125,82,.07), transparent 42%),
+      radial-gradient(circle at 82% 78%, rgba(176,125,82,.06), transparent 46%);
+  }
+
+  /* ---------- 顶部 ---------- */
+  .hero{
+    position: relative;
+    z-index: 1;
+    /*内部文字全部居中*/
+    text-align: center;
+    /*padding 4个值上右下左 3个值上|左右|下 2个值上下|左右 1个值四边全一样*/
+    padding: 104px 24px 72px;
+  }
+
+  .eyebrow{
+    /*外边距*/
+    margin: 0 0 18px;
+    /*字体大小，相对于根字体 0.72倍，1rem=16px*/
+    font-size: .72rem;
+    /*字间距非常大，拉开每个字母，做成轻奢细长的效果，默认字间距0em*/
+    letter-spacing: .42em;
+    /*强制转化为大写字母*/
+    text-transform: uppercase;
+    color: var(--accent);
+    /*不透明度85%*/
+    opacity: .85;
+  }
+
+  .hero h1{
+    margin: 0;
+    font-family: "Songti SC", "STSong", "SimSun", Georgia, serif;
+    /*clamp(最小值，理想值，最大值)最小不会小于2rem，默认跟着视口宽度走5vw（视口宽度的5%）*/
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    /*字重500，属于中等偏粗，不是粗黑700，温润不刺眼*/
+    font-weight: 500;
+    letter-spacing: .12em;
+    /*行高，是文字自身字号的1.3倍*/
+    line-height: 1.3;
+  }
+
+  .hero .subtitle{
+    /*上20px，左右居中，下0px*/
+    margin: 20px auto 0;
+    max-width: 520px;
+    font-size: .95rem;
+    line-height: 1.9;
+    color: var(--muted);
+    letter-spacing: .06em;
+  }
+  /*装饰横线*/
+  .hero-line{
+    width: 54px;
+    height: 1px;
+    margin: 36px auto 0;
+    background: var(--accent);
+    opacity: .45;
+  }
+
+  /* ---------- 相册网格 ---------- */
+  .album-grid{
+    /*相对定位*/
+    position: relative;
+    z-index: 1;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 24px 28px 110px;
+    /*开启css grid网格布局（专门做多列卡片，比flex做自动列舒服）*/
+    display: grid;
+    /*grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); 
+​      auto-fill ：自动填充，只要空间够就往里面塞新的一列
+​      minmax(272px, 1fr) ：每一列最小宽度 272px；富余空间就均分拉伸
+​      人话：窗口很宽就多排几列；窗口缩小，自动减少列数，卡片最小不会压到比 272px 更窄*/
+    grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+    /*网格间隙，行间距42px，列间距32px*/
+    gap: 42px 32px;
+  }
+
+  .photo-card{
+    position: relative;
+    margin: 0;
+    padding: 14px 14px 20px;
+    background: var(--card);
+    /*圆角，小小的圆弧，不会很夸张*/
+    border-radius: 4px;
+    /*鼠标放上来，光标变成小手，提示可以点击*/
+    cursor: pointer;
+    /*两层阴影叠加
+    第一层 offset-x=0水平不偏移 offset-y=1px阴影往下挪1px blur=2px模糊半径2px 没有 spread，默认0
+    第二层 offset-x=0水平不动 offset-y = 14px阴影向下偏移 14px blur=30px模糊很大，很柔和 spread=-14px收缩阴影 14px
+    offset-x为正数时向右，offset-y为正数时向下*/
+    box-shadow:
+      0 1px 2px rgba(59,52,44,.07),
+      0 14px 30px -14px rgba(59,52,44,.35);
+    /**/
+    rotate: var(--rot, 0deg);
+    /*初始位置向下偏移28px，相当于卡片蹲在目标位置下面*/
+    translate: 0 28px;
+    /*默认完全透明，可视度0%*/
+    opacity: 0;
+    /*过渡动画  ease是缓动函数的值，ease默认，先快，靠近重点慢慢减速，最柔和自然
+    linear匀速，从头到尾一样快，很机械
+    ease-in慢慢启动，越后面越快
+    ease-out一开始很快，临近终点减速
+    ease-in-out先慢，中间快，最后又慢*/
+    transition:
+      /*旋转先到位；位移、淡入慢一点；阴影变化最快*/
+      rotate .5s ease,
+      /*cubic-bezier自定义贝塞尔函数，类似于缓动函数，起点快速拉起，后半段缓慢收敛，有一种'轻轻弹一下，稳稳落下*/
+      translate .85s cubic-bezier(.2,.8,.2,1),
+      opacity .85s ease,
+      box-shadow .45s ease;
+  }
+
+  /* 胶带装饰 */
+  .photo-card::before{
+    content: "";
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    width: 76px;
+    height: 22px;
+    translate: -50% 0;
+    rotate: -2.5deg;
+    background: rgba(214,190,150,.55);
+    box-shadow: 0 2px 5px rgba(59,52,44,.12);
+    backdrop-filter: blur(1px);
+    z-index: 2;
+  }
+
+  .photo-card.in{
+    translate: 0 0;
+    opacity: 1;
+  }
+
+  .photo-card:hover,
+  .photo-card:focus-visible{
+    rotate: 0deg;
+    translate: 0 -8px;
+    outline: none;
+    box-shadow:
+      0 1px 2px rgba(59,52,44,.07),
+      0 26px 44px -18px rgba(59,52,44,.45);
+  }
+
+  .photo-frame{
+    position: relative;
+    /*强制盒子保持4::3*/
+    aspect-ratio: 4 / 3;
+    /*裁掉盒子外面的内容，图片放大的时候不会鼓出来*/
+    overflow: hidden;
+    /*很小的圆角*/
+    border-radius: 2px;
+    background: #e9e1d4;
+  }
+
+  .photo-frame img{
+    width: 100%;
+    height: 100%;
+    /*图片保持自身比例，填满相框，多余区域裁剪，不会拉伸变形*/
+    object-fit: cover;
+    /*干掉图片底部自带的一小条空白缝隙*/
+    display: block;
+    /*默认就是原始大小*/
+    transform: scale(1);
+    /*滤镜，饱和度压低到92%，对比度轻微拉高，自带柔和、偏复古的质感*/
+    filter: saturate(.92) contrast(1.02);
+    /*动画规则 transform,filter发生变化时，用0.65s平滑过渡，不会瞬间跳变*/
+    transition: transform .65s cubic-bezier(.2,.8,.2,1), filter .65s ease;
+  }
+
+  .photo-card:hover .photo-frame img{
+    transform: scale(1.06);
+    filter: saturate(1.06) contrast(1.02);
+  }
+
+  .img-fallback{
+    position: absolute;
+    inset: 0;
+    display: none;
+    place-items: center;
+    gap: 6px;
+    text-align: center;
+    padding: 12px;
+    background:
+      repeating-linear-gradient(45deg, #eee6d8 0 12px, #e9e0d1 12px 24px);
+    color: #a8998a;
+    font-size: .78rem;
+    letter-spacing: .08em;
+  }
+
+  .img-fallback span{
+    display: block;
+    font-size: 1.4rem;
+    opacity: .6;
+  }
+
+  .photo-frame.error .img-fallback{ display: grid; }
+  .photo-frame.error img{ display: none; }
+
+  .photo-card figcaption{ padding: 15px 4px 0; }
+
+  .photo-card h3{
+    margin: 0 0 6px;
+    font-family: "Songti SC", "STSong", Georgia, serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: .05em;
+  }
+
+  .photo-card .date{
+    margin: 0 0 10px;
+    font-size: .74rem;
+    letter-spacing: .16em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .photo-card .desc{
+    margin: 0;
+    font-size: .85rem;
+    line-height: 1.75;
+    color: var(--muted);
+    display: -webkit-box;
+    -line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* ---------- 页脚 ---------- */
+  .site-footer{
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 0 24px 64px;
+    font-size: .8rem;
+    letter-spacing: .18em;
+    color: var(--muted);
+    opacity: .75;
+  }
+
+  .site-footer p{ margin: 0; }
+
+  /* ---------- 灯箱 ---------- */
+  .lightbox{
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    background: rgba(30,25,20,.93);
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .38s ease, visibility .38s ease;
+  }
+
+  .lightbox.open{
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .lb-figure{
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+    max-height: 100%;
+    transform: scale(.96);
+    opacity: 0;
+    transition: transform .45s cubic-bezier(.2,.8,.2,1), opacity .45s ease;
+  }
+
+  .lightbox.open .lb-figure{
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  .lb-media{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .lb-media img{
+    max-width: min(900px, 86vw);
+    max-height: 62vh;
+    object-fit: contain;
+    border-radius: 4px;
+    background: #1a1613;
+    box-shadow: 0 34px 80px rgba(0,0,0,.6);
+  }
+
+  .lb-placeholder{
+    display: none;
+    padding: 70px 46px;
+    border: 1px dashed rgba(246,239,228,.28);
+    border-radius: 6px;
+    color: rgba(246,239,228,.5);
+    font-size: .85rem;
+    letter-spacing: .12em;
+    text-align: center;
+  }
+
+  .lb-media.error img{ display: none; }
+  .lb-media.error .lb-placeholder{ display: block; }
+
+  .lb-caption{
+    max-width: 620px;
+    text-align: center;
+    color: #f3ece1;
+    padding: 0 8px;
+  }
+
+  .lb-caption h3{
+    margin: 0 0 10px;
+    font-family: "Songti SC", "STSong", Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    letter-spacing: .08em;
+  }
+
+  .lb-meta{
+    margin: 0 0 14px;
+    font-size: .74rem;
+    letter-spacing: .2em;
+    color: #d3a878;
+  }
+
+  .lb-desc{
+    margin: 0;
+    font-size: .88rem;
+    line-height: 1.9;
+    color: rgba(243,236,225,.72);
+    letter-spacing: .04em;
+  }
+
+  .lb-btn{
+    position: absolute;
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,.18);
+    background: rgba(255,255,255,.08);
+    color: #f6efe4;
+    font-size: 1.35rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .25s ease, border-color .25s ease, transform .25s ease;
+  }
+
+  .lb-btn:hover{
+    background: rgba(255,255,255,.2);
+    border-color: rgba(255,255,255,.35);
+  }
+
+  .lb-close{ top: 26px; right: 30px; font-size: 1rem; }
+  .lb-prev{ left: 30px; top: 50%; translate: 0 -50%; }
+  .lb-next{ right: 30px; top: 50%; translate: 0 -50%; }
+
+  .lb-prev:hover{ transform: translateX(-2px); }
+  .lb-next:hover{ transform: translateX(2px); }
+
+  .lb-counter{
+    position: absolute;
+    bottom: 22px;
+    left: 50%;
+    translate: -50% 0;
+    font-size: .74rem;
+    letter-spacing: .28em;
+    color: rgba(246,239,228,.55);
+  }
+
+  /* ---------- 响应式 ---------- */
+  @media (max-width: 680px){
+    .hero{ padding: 76px 20px 52px; }
+    .hero .subtitle{ font-size: .88rem; }
+    .album-grid{
+      grid-template-columns: 1fr;
+      gap: 34px;
+      padding: 16px 18px 80px;
+    }
+    .lightbox{ padding: 64px 14px 72px; }
+    .lb-media img{ max-width: 92vw; max-height: 52vh; }
+    .lb-btn{ width: 38px; height: 38px; font-size: 1.1rem; }
+    .lb-close{ top: 14px; right: 14px; }
+    .lb-prev{ left: 10px; }
+    .lb-next{ right: 10px; }
+    .lb-caption h3{ font-size: 1.08rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition: none !important; animation: none !important; }
+    .photo-card{ opacity: 1; translate: 0 0; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="hero">
+    <p class="eyebrow">Family Album</p>
+    <h1>时光 · 家庭相册</h1>
+    <p>老余一家人的私有网站</p>
+    <p class="subtitle">那些被定格的瞬间，是我们一起走过的日子</p>
+    <div class="hero-line"></div>
+  </header>
+
+  <main>
+    <div class="album-grid" id="albumGrid"></div>
+  </main>
+
+  <footer class="site-footer">
+    <p>愿每一次翻看，都能回到那个温暖的瞬间</p>
+  </footer>
+
+  <!-- 灯箱 -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-hidden="true">
+    <button class="lb-btn lb-close" id="lbClose" aria-label="关闭">✕</button>
+    <button class="lb-btn lb-prev" id="lbPrev" aria-label="上一张">‹</button>
+    <button class="lb-btn lb-next" id="lbNext" aria-label="下一张">›</button>
+
+    <figure class="lb-figure">
+      <div class="lb-media" id="lbMedia">
+        <img id="lbImg" alt="" />
+        <div class="lb-placeholder">图片地址待填写</div>
+      </div>
+      <figcaption class="lb-caption">
+        <h3 id="lbTitle"></h3>
+        <p class="lb-meta" id="lbMeta"></p>
+        <p class="lb-desc" id="lbDesc"></p>
+      </figcaption>
+    </figure>
+
+    <div class="lb-counter" id="lbCounter"></div>
+  </div>
+
+<script>
+/* ============================================================
+   ★★★ 在这里填写你自己的照片 ★★★
+   把 url 换成你图片的地址（网络地址或本地相对路径都行）
+   例如：url: "images/family-01.jpg"
+   或者：url: "https://你的图床地址/photo.jpg"
+   ============================================================ */
+const photos = [
+  {
+    url: "",                       // ← 图片地址填这里
+    title: "外婆家的院子",
+    date: "2016 · 夏",
+    desc: "老槐树下摆着竹椅，外婆摇着蒲扇，一下午的蝉鸣都没停过。"
+  },
+  {
+    url: "",                       // ← 图片地址填这里
+    title: "第一次全家旅行",
+    date: "2018 · 春",
+    desc: "爸妈第一次坐飞机，一路上都在看窗外的云。"
+  },
+  {
+    url: "",                       // ← 图片地址填这里
+    title: "厨房里的年夜饭",
+    date: "2019 · 除夕",
+    desc: "厨房热气腾腾，谁也顾不上看镜头，这大概就是最好的样子。"
+  },
+  {
+    url: "",                       // ← 图片地址填这里
+    title: "毕业那天",
+    date: "2020 · 六月",
+    desc: "捧着一束花站在校门口，爸妈比我还笑得开心。"
+  },
+  {
+    url: "",                       // ← 图片地址填这里
+    title: "海边的小脚印",
+    date: "2022 · 夏",
+    desc: "潮水退下去的时候，留下一串歪歪扭扭的脚印。"
+  },
+  {
+    url: "",                       // ← 图片地址填这里
+    title: "一起过的生日",
+    date: "2023 · 冬",
+    desc: "蛋糕上的蜡烛一年比一年多，愿望却一直是同一个。"
+  }
+];
+
+/* ============================================================
+   以下为功能代码，通常不需要修改
+   ============================================================ */
+const grid      = document.getElementById('albumGrid');
+const lightbox  = document.getElementById('lightbox');
+const lbImg     = document.getElementById('lbImg');
+const lbMedia   = document.getElementById('lbMedia');
+const lbTitle   = document.getElementById('lbTitle');
+const lbMeta    = document.getElementById('lbMeta');
+const lbDesc    = document.getElementById('lbDesc');
+const lbCounter = document.getElementById('lbCounter');
+
+const rotations = [-1.6, 1.2, -0.8, 1.7, -1.1, 0.7, 1.4, -1.3];
+let current = 0;
+let imgToken = 0;
+
+/* ---------- 生成相册卡片 ---------- */
+photos.forEach((photo, index) => {
+  const card = document.createElement('figure');
+  card.className = 'photo-card';
+  card.style.setProperty('--rot', rotations[index % rotations.length] + 'deg');
+  card.dataset.index = index;
+  card.tabIndex = 0;
+  card.setAttribute('role', 'button');
+  card.setAttribute('aria-label', `查看照片：${photo.title || '未命名回忆'}`);
+
+  const frame = document.createElement('div');
+  frame.className = 'photo-frame';
+
+  const fallback = document.createElement('div');
+  fallback.className = 'img-fallback';
+  fallback.innerHTML = '<div><span>🖼</span>图片地址待填写</div>';
+  frame.appendChild(fallback);
+
+  if (photo.url && photo.url.trim()) {
+    const img = new Image();
+    img.loading = 'lazy';
+    img.alt = photo.title || '家庭照片';
+    img.addEventListener('error', () => frame.classList.add('error'));
+    img.src = photo.url.trim();
+    frame.prepend(img);
+  } else {
+    frame.classList.add('error');
+  }
+
+  const caption = document.createElement('figcaption');
+  const h3 = document.createElement('h3');
+  const date = document.createElement('p');
+  const desc = document.createElement('p');
+  h3.textContent = photo.title || '未命名回忆';
+  date.className = 'date';
+  date.textContent = photo.date || '';
+  desc.className = 'desc';
+  desc.textContent = photo.desc || '';
+  caption.append(h3, date, desc);
+
+  card.append(frame, caption);
+  grid.appendChild(card);
+
+  /* 点击 / 键盘打开 */
+  card.addEventListener('click', () => openLightbox(index));
+  card.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openLightbox(index);
+    }
+  });
+});
+
+/* ---------- 滚动淡入 ---------- */
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (!entry.isIntersecting) return;
+    const idx = Number(entry.target.dataset.index) || 0;
+    setTimeout(() => entry.target.classList.add('in'), (idx % 3) * 90);
+    observer.unobserve(entry.target);
+  });
+}, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.photo-card').forEach((card) => observer.observe(card));
+
+/* ---------- 灯箱 ---------- */
+function openLightbox(index) {
+  current = index;
+  renderLightbox();
+  lightbox.classList.add('open');
+  lightbox.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+  lightbox.classList.remove('open');
+  lightbox.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+function renderLightbox() {
+  const photo = photos[current];
+  if (!photo) return;
+  const token = ++imgToken;
+
+  lbMedia.classList.remove('error');
+  lbTitle.textContent = photo.title || '未命名回忆';
+  lbMeta.textContent = photo.date || '';
+  lbMeta.style.display = photo.date ? '' : 'none';
+  lbDesc.textContent = photo.desc || '';
+  lbDesc.style.display = photo.desc ? '' : 'none';
+  lbCounter.textContent = `${current + 1} / ${photos.length}`;
+
+  if (photo.url && photo.url.trim()) {
+    lbImg.onerror = () => {
+      if (token === imgToken) lbMedia.classList.add('error');
+    };
+    lbImg.src = photo.url.trim();
+    lbImg.alt = photo.title || '家庭照片';
+  } else {
+    lbImg.removeAttribute('src');
+    lbImg.alt = '';
+    lbMedia.classList.add('error');
+  }
+}
+
+function nextPhoto() {
+  current = (current + 1) % photos.length;
+  renderLightbox();
+}
+
+function prevPhoto() {
+  current = (current - 1 + photos.length) % photos.length;
+  renderLightbox();
+}
+
+/* ---------- 事件绑定 ---------- */
+document.getElementById('lbClose').addEventListener('click', closeLightbox);
+document.getElementById('lbNext').addEventListener('click', (e) => { e.stopPropagation(); nextPhoto(); });
+document.getElementById('lbPrev').addEventListener('click', (e) => { e.stopPropagation(); prevPhoto(); });
+
+/* 点击背景关闭 */
+lightbox.addEventListener('click', (e) => {
+  if (e.target === lightbox) closeLightbox();
+});
+
+/* 键盘操作 */
+document.addEventListener('keydown', (e) => {
+  if (!lightbox.classList.contains('open')) return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowRight') nextPhoto();
+  if (e.key === 'ArrowLeft') prevPhoto();
+});
+
+/* 手机滑动切换 */
+let touchStartX = 0;
+lightbox.addEventListener('touchstart', (e) => {
+  touchStartX = e.changedTouches[0].clientX;
+}, { passive: true });
+
+lightbox.addEventListener('touchend', (e) => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(dx) < 60) return;
+  dx < 0 ? nextPhoto() : prevPhoto();
+}, { passive: true });
+</script>
+</body>
+</html>
