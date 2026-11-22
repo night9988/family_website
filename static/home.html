@@ -10,14 +10,20 @@
 <div class="wrapper">
     <aside class="sidebar">
         <h2 class="header">站点导航</h2>
-        <a href="/">家庭相册</a>
-        <a href="/">欢乐游戏</a>
-        <a href="/">ai陪聊</a>
+        <a href="#" class="nav-link" data-target="view-home">首页</a>
+        <a href="#" class="nav-link" data-target="view-album">家庭相册</a>
+        <a href="#" class="nav-link" data-target="view-game">欢乐游戏</a>
+        <a href="#" class="nav-link" data-target="view-chat">ai陪聊</a>
     </aside>
     <main>
-        <eye>欢迎来到18岁资深老六的个人网站</eye>
-        <iframe src="/static/index.html" style="width:100%;height:600px;border:none;"></iframe>
+        <div id="view-home" class="view">
+            <eye>欢迎来到18岁资深老六的个人网站</eye>
+        </div>
+        <div id="view-game" class="view hidden">
+            <iframe id="game-frame" data-src="/static/game-skyward.html" style="width:100%;height:600px;border:none;"></iframe>
+        </div>
     </main>
 </div>
 </body> 
+<script src="/static/js/main.js"></script>
 </html>
