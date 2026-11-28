@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新闻浏览</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        body {
+            background-color: #f4f5f7;
+            padding: 24px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .page-title {
+            font-size: 28px;
+            color: #222;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #3474d9;
+        }
+        .news-list {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 8px 4px 16px;
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+        }
+        .news-list::-webkit-scrollbar {
+            height: 6px;
+        }
+        .news-list::-webkit-scrollbar-thumb {
+            background-color: #b8c8e2;
+            border-radius: 3px;
+        }
+        .news-card {
+            flex: 0 0 320px;
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: 0.2s ease;
+        }
+        .news-card:hover {
+            box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+        }
+        .news-title {
+            font-size: 20px;
+            color: #222;
+            text-decoration: none;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .news-title:hover {
+            color: #3474d9;
+        }
+        .news-meta {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 12px;
+        }
+        .news-desc {
+            font-size: 15px;
+            color: #555;
+            line-height: 1.7;
+        }
+        .news-footer {
+            margin-top: 14px;
+            text-align: right;
+        }
+        .read-link {
+            font-size: 14px;
+            color: #3474d9;
+            text-decoration: none;
+        }
+        .read-link:hover {
+            text-decoration: underline;
+        }
+        .empty-tip {
+            flex: 0 0 100%;
+            text-align: center;
+            padding: 60px 0;
+            color: #999;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="page-title">新闻资讯</h2>
+        <div class="news-list" id="newsWrap">
+        </div>
+    </div>
+
+<script>
+// 渲染函数：接收新闻数组，生成卡片
+function renderNews(newsList) {
+    const wrap = document.getElementById('newsWrap');
+    wrap.innerHTML = '';
+
+    if (!newsList || newsList.length === 0) {
+        wrap.innerHTML = `<div class="empty-tip">暂无新闻</div>`;
+        return;
+    }
+
+    newsList.forEach(item => {
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'news-card';
+        cardDiv.innerHTML = `
+            <a href="${item.url}" class="news-title">${item.title}</a>
+            <div class="news-meta">发布时间：${item.time} | 来源：${item.source}</div>
+            <div class="news-desc">${item.summary}</div>
+            <div class="news-footer">
+                <a href="${item.url}" class="read-link">查看原文 →</a>
+            </div>
+        `;
+        wrap.appendChild(cardDiv);
+    })
+}
+
+// 从FastAPI接口拉取数据
+function loadNews() {
+    fetch("/api/news")
+        .then(res => res.json())
+        .then(data => {
+            renderNews(data);
+        })
+        .catch(err => {
+            console.error("获取新闻失败：", err);
+            renderNews([]);
+        })
+}
+
+// 页面加载完成自动执行
+window.onload = function() {
+    loadNews();
+}
+
+// 测试用的假数据，你可以注释掉，等后端接口做好再打开上面loadNews
+/*
+const testData = [
+    {
+        title: "第一条测试新闻",
+        time: "2026-11-26 10:00",
+        source: "测试来源",
+        summary: "这是新闻摘要内容，用来测试卡片渲染效果。",
+        url: "https://example.com"
+    },
+    {
+        title: "第二条测试新闻",
+        time: "2026-11-26 11:20",
+        source: "测试来源",
+        summary: "第二条新闻的摘要，横向滑动可以看到更多卡片。",
+        url: "https://example.com"
+    }
+]
+renderNews(testData);
+*/
+</script>
+</body>
+</html>

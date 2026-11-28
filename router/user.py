@@ -3,7 +3,7 @@ import json
 from fastapi import APIRouter,Response,Depends
 from fastapi.responses import HTMLResponse,JSONResponse
 
-from config import USER_PATH,HTML_HOME,SIGN_IN
+from config.config import USER_PATH,HTML_HOME,SIGN_IN
 from schemas.user import SignInRequest
 from auth.auth import create_token,verify_token
 router=APIRouter()

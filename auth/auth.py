@@ -6,6 +6,8 @@ from config import TOKEN
 
 Token_Expired_Time=24*60*60
 
+#用于个人网站，以及为了方便之后的账号、Token管理，我选择直接将user、token表直接存储在本地文件上
+#可根据你自己的需求来选择，是否连接数据库存储user、token
 async def create_token(username:str,password:str,user_list:dict):
     if username not in user_list:
         raise HTTPException(status_code=401,detail="用户不存在")

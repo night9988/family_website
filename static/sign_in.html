@@ -1,18 +1,23 @@
 <!DOCTYPE html>
 <head>
     <meta charset="utf-8">
-    <meta name="viewpoint" content="width=device-width,inital-scale=1">
-    <style>
-        .input{
-            display: block;
-            
-        }
-    </style>
+    <meta name="viewport" content="width=device-width,inital-scale=1">
 </head>
-<body>
-    <input type="text" id="username" placeholder="账号">
-    <input type="password" id="password" placeholder="密码">
-    <button id="login-btn">登录</button>
+<body style="margin:0; padding:0; min-height:100vh; background-color:#f1f3f5; 
+display:flex; align-items:center; justify-content:center; font-family:system-ui, sans-serif;">
+  <div style="width:340px; background:#fff; padding:32px; border-radius:10px; box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+    <div style="margin-bottom:24px; text-align:center; font-size:22px; color:#333;">登录</div>
+    <div style="margin-bottom:16px;">
+      <input type="text" id="username" placeholder="账号" style="width:100%; 
+      box-sizing:border-box; padding:12px 14px; border:1px solid #ddd; border-radius:6px; font-size:15px;">
+    </div>
+    <div style="margin-bottom:24px;">
+      <input type="password" id="password" placeholder="密码" style="width:100%; box-sizing:border-box; 
+      padding:12px 14px; border:1px solid #ddd; border-radius:6px; font-size:15px;">
+    </div>
+    <button id="login-btn" style="width:100%; padding:12px; border:none; border-radius:6px; 
+    background:#3b82f6; color:white; font-size:16px; cursor:pointer;">登录</button>
+  </div>
 </body>
 <script>
     document.getElementById("login-btn").addEventListener("click",async()=>{
@@ -39,3 +44,4 @@
         }catch(error){console.error('网络请求出错',error);}
     })
 </script>
+</html>
